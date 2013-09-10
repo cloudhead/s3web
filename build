@@ -1,0 +1,45 @@
+#!/usr/bin/env ruby
+
+require "erb"
+require "redcarpet"
+require "ostruct"
+require "yaml"
+
+ARTICLES         = Dir["articles/*.txt"]
+ARTICLE_TEMPLATE = File.read("templates/article.html.erb")
+INDEX_TEMPLATE   = File.read("templates/index.html.erb")
+INDEX_PATH       = "index.html"
+
+$markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML, autolink: true, space_after_headers: true)
+
+class Article
+  def initialize(filename)
+    @filename = filename
+    @attrs = {}
+    self.load!
+  end
+
+  def load!
+    meta, body = File.read(@filename).split(/\n\n/, 2)
+    @attrs = YAML.load(meta).reduce({}) do |h, (k, v)|
+      h.merge(k.downcase.to_sym => v)
+    end.merge({ body: body })
+  end
+
+  def to_html
+    ERB.new(ARTICLE_TEMPLATE).result(OpenStruct.new(@attrs).instance_eval { binding })
+  end
+end
+
+def articles
+  ARTICLES.map do |f|
+    Article.new(f).to_html
+  end.join
+end
+
+def build!
+  result = ERB.new(INDEX_TEMPLATE).result(binding)
+  File.new(INDEX_PATH, "w").write(result)
+end
+
+build!
