@@ -10,20 +10,29 @@ ARTICLE_TEMPLATE = File.read("templates/article.html.erb")
 INDEX_TEMPLATE   = File.read("templates/index.html.erb")
 INDEX_PATH       = "index.html"
 
-$markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML, autolink: true, space_after_headers: true)
+$markdown = Redcarpet::Markdown.new(
+  Redcarpet::Render::HTML.new(hard_wrap: true),
+  autolink: true,
+  space_after_headers: true
+)
 
 class Article
   def initialize(filename)
     @filename = filename
     @attrs = {}
+    @timestamp = @filename.match(/\d{8}/)[0]
     self.load!
+  end
+
+  def timestamp
+    @timestamp
   end
 
   def load!
     meta, body = File.read(@filename).split(/\n\n/, 2)
     @attrs = YAML.load(meta).reduce({}) do |h, (k, v)|
       h.merge(k.downcase.to_sym => v)
-    end.merge({ body: body })
+    end.merge({ body: $markdown.render(body) })
   end
 
   def to_html
@@ -33,8 +42,10 @@ end
 
 def articles
   ARTICLES.map do |f|
-    Article.new(f).to_html
-  end.join
+    Article.new(f)
+  end.sort do |x, y|
+    x.timestamp <=> y.timestamp
+  end.reverse.map(&:to_html).join
 end
 
 def build!
