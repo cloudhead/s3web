@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'aws-sdk'
+require 'aws-sdk-v1'
 require 'digest/md5'
 
 SITE = AWS::S3.new(region: ENV['AWS_REGION'] || 'eu-west-1')
